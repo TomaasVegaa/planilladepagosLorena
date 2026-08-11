@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileDown, CalendarDays, Calculator } from 'lucide-react';
+import { FileDown, CalendarDays, Calculator, Search } from 'lucide-react';
 import { useStore } from './store/useStore';
 import { AddPlayer } from './components/AddPlayer';
 import { PaymentGrid } from './components/PaymentGrid';
@@ -9,11 +9,17 @@ import { MONTHS } from './utils/constants';
 function App() {
   const { players, payments, addPlayer, togglePayment, editPlayer, toggleBaja } = useStore();
   const [selectedMonth, setSelectedMonth] = useState(MONTHS[0].key);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleDownloadReport = () => {
     const monthObj = MONTHS.find(m => m.key === selectedMonth);
     generateSingleMonthReport(monthObj, players, payments);
   };
+
+  const filteredPlayers = players.filter(p => {
+    const fullName = `${p.name} ${p.lastName || ''}`.toLowerCase();
+    return fullName.includes(searchQuery.toLowerCase());
+  });
 
   // Calculate some stats
   const activePlayers = players.filter(p => p.status !== 'baja');
@@ -97,9 +103,24 @@ function App() {
       <AddPlayer onAdd={addPlayer} />
 
       <div style={{ marginBottom: '1rem' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>Control de Pagos</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Control de Pagos</h2>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+            <div style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+              <Search size={18} />
+            </div>
+            <input 
+              type="text" 
+              placeholder="Buscar jugadora..." 
+              className="input" 
+              style={{ paddingLeft: '35px' }}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
         <PaymentGrid 
-          players={players} 
+          players={filteredPlayers} 
           payments={payments} 
           togglePayment={togglePayment} 
           editPlayer={editPlayer}
