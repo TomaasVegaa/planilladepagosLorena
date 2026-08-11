@@ -58,11 +58,11 @@ export const PaymentGrid = ({ players, payments, togglePayment, editPlayer, togg
         <table className="premium-table">
           <thead>
             <tr>
-              <th style={{ minWidth: '250px', position: 'sticky', left: 0, backgroundColor: 'var(--surface)', zIndex: 10 }}>
+              <th style={{ minWidth: '160px', position: 'sticky', left: 0, backgroundColor: 'var(--surface)', zIndex: 10 }}>
                 Jugadora
               </th>
               {MONTHS.map((month) => (
-                <th key={month.key} style={{ textAlign: 'center', minWidth: '100px' }}>
+                <th key={month.key} style={{ textAlign: 'center', minWidth: '80px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                       {month.label}
