@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const STORAGE_KEY = 'basquet_pagos_data_v2';
+import { supabase } from '../supabaseClient';
 
 const INITIAL_NAMES = [
   "Dani", "Lore", "Fabi", "Nancy", "Lita", "Ele", "Roxana", "Elvira", 
@@ -8,91 +7,164 @@ const INITIAL_NAMES = [
   "Su liberto", "Sandra", "Gallega", "Pocha", "Lucy", "Isa"
 ];
 
-const INITIAL_PLAYERS = INITIAL_NAMES.map((name, index) => ({
-  id: `initial-${index}`,
-  name,
-  lastName: '',
-  status: 'active', // 'active' | 'baja'
-  createdAt: new Date().toISOString()
-}));
-
 export const useStore = () => {
   const [players, setPlayers] = useState([]);
   const [payments, setPayments] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load from LocalStorage on initial render
   useEffect(() => {
-    const savedData = localStorage.getItem(STORAGE_KEY);
-    if (savedData) {
-      const { players: savedPlayers, payments: savedPayments } = JSON.parse(savedData);
-      setPlayers(savedPlayers || INITIAL_PLAYERS);
-      setPayments(savedPayments || []);
-    } else {
-      setPlayers(INITIAL_PLAYERS);
-      setPayments([]);
-    }
-    setIsLoaded(true);
+    const fetchData = async () => {
+      // 1. Fetch Players
+      const { data: dbPlayers, error: playersError } = await supabase
+        .from('players')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (playersError) {
+        console.error('Error fetching players:', playersError);
+        return;
+      }
+
+      // If database is empty, seed it with INITIAL_NAMES
+      if (!dbPlayers || dbPlayers.length === 0) {
+        const initialData = INITIAL_NAMES.map(name => ({
+          name,
+          last_name: '',
+          status: 'active'
+        }));
+
+        const { data: newPlayers, error: insertError } = await supabase
+          .from('players')
+          .insert(initialData)
+          .select();
+
+        if (insertError) {
+          console.error('Error seeding players:', insertError);
+        } else if (newPlayers) {
+          setPlayers(newPlayers.map(p => ({ ...p, lastName: p.last_name })));
+        }
+      } else {
+        setPlayers(dbPlayers.map(p => ({ ...p, lastName: p.last_name })));
+      }
+
+      // 2. Fetch Payments
+      const { data: dbPayments, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*');
+        
+      if (!paymentsError && dbPayments) {
+        setPayments(dbPayments.map(p => ({
+          id: p.id,
+          playerId: p.player_id,
+          monthKey: p.month_key,
+          amount: p.amount,
+          paidAt: p.paid_at
+        })));
+      }
+
+      setIsLoaded(true);
+    };
+
+    fetchData();
   }, []);
 
-  // Save to LocalStorage whenever state changes
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ players, payments }));
+  const addPlayer = async (name, lastName) => {
+    const { data, error } = await supabase
+      .from('players')
+      .insert([{ name, last_name: lastName, status: 'active' }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      setPlayers([...players, { ...data, lastName: data.last_name }]);
     }
-  }, [players, payments, isLoaded]);
-
-  const addPlayer = (name, lastName) => {
-    const newPlayer = {
-      id: Date.now().toString(),
-      name,
-      lastName,
-      status: 'active',
-      createdAt: new Date().toISOString()
-    };
-    setPlayers([...players, newPlayer]);
   };
 
-  const editPlayer = (id, newName, newLastName) => {
+  const editPlayer = async (id, newName, newLastName) => {
+    // Optimistic UI update
     setPlayers(players.map(p => p.id === id ? { ...p, name: newName, lastName: newLastName } : p));
+    
+    // DB update
+    await supabase
+      .from('players')
+      .update({ name: newName, last_name: newLastName })
+      .eq('id', id);
   };
 
-  const toggleBaja = (id) => {
-    setPlayers(players.map(p => p.id === id ? { ...p, status: p.status === 'active' ? 'baja' : 'active' } : p));
+  const toggleBaja = async (id) => {
+    const player = players.find(p => p.id === id);
+    if (!player) return;
+    
+    const newStatus = player.status === 'active' ? 'baja' : 'active';
+    
+    // Optimistic UI update
+    setPlayers(players.map(p => p.id === id ? { ...p, status: newStatus } : p));
+    
+    // DB update
+    await supabase
+      .from('players')
+      .update({ status: newStatus })
+      .eq('id', id);
   };
 
-  const removePlayer = (id) => {
-    setPlayers(players.filter(p => p.id !== id));
-    setPayments(payments.filter(p => p.playerId !== id));
-  };
-
-  const togglePayment = (playerId, monthKey) => {
-    // Prevent payment changes if player is baja
+  const togglePayment = async (playerId, monthKey) => {
     const player = players.find(p => p.id === playerId);
     if (player?.status === 'baja') return;
 
     const existingPayment = payments.find(p => p.playerId === playerId && p.monthKey === monthKey);
     
     if (existingPayment) {
+      // Optimistic delete
       setPayments(payments.filter(p => p.id !== existingPayment.id));
+      
+      // DB delete
+      await supabase
+        .from('payments')
+        .delete()
+        .eq('id', existingPayment.id);
     } else {
+      // Create a temporary ID for optimistic update
+      const tempId = `temp-${Date.now()}`;
       const newPayment = {
-        id: Date.now().toString(),
+        id: tempId,
         playerId,
         monthKey,
         amount: 25000,
         paidAt: new Date().toISOString()
       };
+      
+      // Optimistic insert
       setPayments([...payments, newPayment]);
+      
+      // DB insert
+      const { data, error } = await supabase
+        .from('payments')
+        .insert([{ player_id: playerId, month_key: monthKey, amount: 25000 }])
+        .select()
+        .single();
+        
+      if (!error && data) {
+        // Update temporary payment with real DB data
+        setPayments(prev => prev.map(p => p.id === tempId ? {
+          id: data.id,
+          playerId: data.player_id,
+          monthKey: data.month_key,
+          amount: data.amount,
+          paidAt: data.paid_at
+        } : p));
+      } else {
+        // Revert on error
+        setPayments(prev => prev.filter(p => p.id !== tempId));
+      }
     }
   };
 
   return {
     players,
     payments,
+    isLoaded,
     addPlayer,
     editPlayer,
-    removePlayer,
     toggleBaja,
     togglePayment
   };
