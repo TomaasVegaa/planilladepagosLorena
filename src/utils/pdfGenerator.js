@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export const generateSingleMonthReport = (month, players, payments) => {
   const doc = new jsPDF();
@@ -27,7 +27,7 @@ export const generateSingleMonthReport = (month, players, payments) => {
   });
 
   // Table Data
-  doc.autoTable({
+  autoTable(doc, {
     head: [['Jugadoras que PAGARON', 'Estado']],
     body: paid.length > 0 ? paid : [['Nadie aún', '-']],
     startY: 40,
@@ -36,7 +36,7 @@ export const generateSingleMonthReport = (month, players, payments) => {
     styles: { fontSize: 10 },
   });
 
-  doc.autoTable({
+  autoTable(doc, {
     head: [['Jugadoras que FALTAN PAGAR', 'Estado']],
     body: unpaid.length > 0 ? unpaid : [['Ninguna', '-']],
     startY: doc.lastAutoTable.finalY + 10,
