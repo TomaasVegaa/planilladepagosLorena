@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Receipt, DollarSign, Wallet } from 'lucide-react';
+import { LayoutDashboard, Receipt, DollarSign, Wallet, FileDown } from 'lucide-react';
 import { useConsorcioStore } from '../store/useConsorcioStore';
 import { CONSORCIO_MONTHS } from '../utils/constants';
 import { ConsorcioGrid } from '../components/consorcio/ConsorcioGrid';
 import { ConsorcioExpenses } from '../components/consorcio/ConsorcioExpenses';
+import { generateConsorcioReport } from '../utils/pdfGenerator';
 
 function ConsorcioApp() {
   const { 
@@ -61,6 +62,15 @@ function ConsorcioApp() {
     acumulado -= mExpenses.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
   });
 
+  const handleDownloadPDF = () => {
+    const totals = {
+      ingresos: totalIngresosMes,
+      gastos: totalGastosMes,
+      acumulado: acumulado
+    };
+    generateConsorcioReport(monthObj, owners, currentPayments, currentFinance, currentExpenses, totals);
+  };
+
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       
@@ -85,6 +95,15 @@ function ConsorcioApp() {
               <option key={m.key} value={m.key}>{m.label}</option>
             ))}
           </select>
+          <button 
+            onClick={handleDownloadPDF}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem' }}
+            title="Descargar Informe PDF"
+          >
+            <FileDown size={18} />
+            PDF
+          </button>
         </div>
       </header>
 
