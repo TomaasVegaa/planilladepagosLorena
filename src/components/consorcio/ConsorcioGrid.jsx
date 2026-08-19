@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Save, Check, Search } from 'lucide-react';
+import { Save, Check, Search, Eye } from 'lucide-react';
+import { OwnerDetailsModal } from './OwnerDetailsModal';
 
 export const ConsorcioGrid = ({ owners, payments, updatePayment, monthKey }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedOwnerForDetails, setSelectedOwnerForDetails] = useState(null);
   
   // Local state for fast typing before saving to Supabase
   const [localEdits, setLocalEdits] = useState({});
@@ -41,6 +43,14 @@ export const ConsorcioGrid = ({ owners, payments, updatePayment, monthKey }) => 
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      
+      {selectedOwnerForDetails && (
+        <OwnerDetailsModal 
+          owner={selectedOwnerForDetails} 
+          payments={payments} 
+          onClose={() => setSelectedOwnerForDetails(null)} 
+        />
+      )}
       
       <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', gap: '1rem', alignItems: 'center' }}>
         <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
@@ -86,7 +96,29 @@ export const ConsorcioGrid = ({ owners, payments, updatePayment, monthKey }) => 
               return (
                 <tr key={owner.id} style={{ backgroundColor: rowBg }}>
                   <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{owner.order_num}</td>
-                  <td style={{ fontWeight: 500 }}>{owner.name}</td>
+                  <td style={{ fontWeight: 500 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {owner.name}
+                      <button 
+                        onClick={() => setSelectedOwnerForDetails(owner)}
+                        style={{ 
+                          background: 'none', 
+                          border: 'none', 
+                          cursor: 'pointer', 
+                          color: 'var(--primary)', 
+                          padding: '0.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '4px'
+                        }}
+                        title="Ver historial de pagos"
+                        className="hover-bg-primary-light"
+                      >
+                        <Eye size={18} />
+                      </button>
+                    </div>
+                  </td>
                   <td>
                     <input 
                       type="number"
