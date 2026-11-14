@@ -145,6 +145,66 @@ export const useConsorcioStore = () => {
     }
   };
 
+  // Add Owner
+  const addOwner = async (name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+
+    const nextOrder = owners.length > 0 
+      ? Math.max(...owners.map(o => o.order_num || 0)) + 1 
+      : 1;
+
+    const { data, error } = await supabase
+      .from('consorcio_owners')
+      .insert([{ name: trimmed, order_num: nextOrder, status: 'active' }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      setOwners(prev => [...prev, data]);
+      return data;
+    } else {
+      console.error('Error adding owner:', error);
+      return null;
+    }
+  };
+
+  // Edit Owner
+  const editOwner = async (id, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return false;
+
+    setOwners(prev => prev.map(o => o.id === id ? { ...o, name: trimmed } : o));
+
+    const { error } = await supabase
+      .from('consorcio_owners')
+      .update({ name: trimmed })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating owner:', error);
+      return false;
+    }
+    return true;
+  };
+
+  // Delete Owner
+  const deleteOwner = async (id) => {
+    setOwners(prev => prev.filter(o => o.id !== id));
+    setPayments(prev => prev.filter(p => p.owner_id !== id));
+
+    const { error } = await supabase
+      .from('consorcio_owners')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting owner:', error);
+      return false;
+    }
+    return true;
+  };
+
   return {
     owners,
     payments,
@@ -154,6 +214,9 @@ export const useConsorcioStore = () => {
     updatePayment,
     updateFinances,
     addExpense,
-    deleteExpense
+    deleteExpense,
+    addOwner,
+    editOwner,
+    deleteOwner
   };
 };

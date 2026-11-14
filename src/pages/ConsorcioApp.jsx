@@ -4,12 +4,14 @@ import { useConsorcioStore } from '../store/useConsorcioStore';
 import { CONSORCIO_MONTHS } from '../utils/constants';
 import { ConsorcioGrid } from '../components/consorcio/ConsorcioGrid';
 import { ConsorcioExpenses } from '../components/consorcio/ConsorcioExpenses';
+import { AddOwner } from '../components/consorcio/AddOwner';
 import { generateConsorcioReport } from '../utils/pdfGenerator';
 
 function ConsorcioApp() {
   const { 
     owners, payments, finances, expenses, isLoaded, 
-    updatePayment, updateFinances, addExpense, deleteExpense 
+    updatePayment, updateFinances, addExpense, deleteExpense,
+    addOwner, editOwner, deleteOwner
   } = useConsorcioStore();
   
   const [selectedMonth, setSelectedMonth] = useState(CONSORCIO_MONTHS[0].key);
@@ -202,11 +204,15 @@ function ConsorcioApp() {
               </div>
             )}
             
+            <AddOwner onAdd={addOwner} />
+
             <ConsorcioGrid 
               owners={owners} 
               payments={payments} 
               updatePayment={updatePayment} 
               monthKey={selectedMonth} 
+              onEditOwner={editOwner}
+              onDeleteOwner={deleteOwner}
             />
           </div>
         ) : (
