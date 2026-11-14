@@ -73,11 +73,12 @@ export const generateConsorcioReport = (
   doc.text(`Generado el: ${new Date().toLocaleDateString()}`, 14, 30);
 
   // 1. Ingresos de Propietarios
-  const ownerPayments = owners.map(owner => {
+  const sortedOwners = [...owners].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
+  const ownerPayments = sortedOwners.map((owner, idx) => {
     const p = payments.find(pay => pay.owner_id === owner.id);
     const amount = p ? parseFloat(p.amount || 0) : 0;
     return [
-      owner.order_num.toString(), 
+      (idx + 1).toString(), 
       owner.name, 
       `$${amount.toLocaleString()}`
     ];

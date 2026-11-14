@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { CONSORCIO_INITIAL_OWNERS } from '../utils/constants';
 
+const sortOwnersAlphabetically = (list) => {
+  return [...list].sort((a, b) => 
+    (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })
+  );
+};
+
 export const useConsorcioStore = () => {
   const [owners, setOwners] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -14,8 +20,7 @@ export const useConsorcioStore = () => {
       // 1. Fetch Owners
       const { data: dbOwners, error: ownersError } = await supabase
         .from('consorcio_owners')
-        .select('*')
-        .order('order_num', { ascending: true });
+        .select('*');
 
       if (ownersError) {
         console.error('Error fetching owners:', ownersError);
@@ -38,10 +43,10 @@ export const useConsorcioStore = () => {
         if (insertError) {
           console.error('Error seeding owners:', insertError);
         } else if (newOwners) {
-          setOwners(newOwners);
+          setOwners(sortOwnersAlphabetically(newOwners));
         }
       } else {
-        setOwners(dbOwners);
+        setOwners(sortOwnersAlphabetically(dbOwners));
       }
 
       // 2. Fetch Payments
@@ -161,7 +166,7 @@ export const useConsorcioStore = () => {
       .single();
 
     if (!error && data) {
-      setOwners(prev => [...prev, data]);
+      setOwners(prev => sortOwnersAlphabetically([...prev, data]));
       return data;
     } else {
       console.error('Error adding owner:', error);
@@ -174,7 +179,7 @@ export const useConsorcioStore = () => {
     const trimmed = newName.trim();
     if (!trimmed) return false;
 
-    setOwners(prev => prev.map(o => o.id === id ? { ...o, name: trimmed } : o));
+    setOwners(prev => sortOwnersAlphabetically(prev.map(o => o.id === id ? { ...o, name: trimmed } : o)));
 
     const { error } = await supabase
       .from('consorcio_owners')

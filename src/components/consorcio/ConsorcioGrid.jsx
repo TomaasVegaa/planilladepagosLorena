@@ -75,9 +75,9 @@ export const ConsorcioGrid = ({
     }
   };
 
-  const filteredOwners = owners.filter(o => 
-    o.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const sortedAndFilteredOwners = [...owners]
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }))
+    .filter(o => (o.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -121,14 +121,14 @@ export const ConsorcioGrid = ({
             </tr>
           </thead>
           <tbody>
-            {filteredOwners.length === 0 ? (
+            {sortedAndFilteredOwners.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   No se encontraron propietarios con esa búsqueda.
                 </td>
               </tr>
             ) : (
-              filteredOwners.map(owner => {
+              sortedAndFilteredOwners.map((owner, index) => {
                 const payment = payments.find(p => p.owner_id === owner.id && p.month_key === monthKey);
                 const currentEdit = localEdits[owner.id];
                 
@@ -144,7 +144,7 @@ export const ConsorcioGrid = ({
 
                 return (
                   <tr key={owner.id} style={{ backgroundColor: rowBg }}>
-                    <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{owner.order_num}</td>
+                    <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{index + 1}</td>
                     <td style={{ fontWeight: 500 }}>
                       {isEditingThisOwner ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
